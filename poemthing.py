@@ -145,6 +145,7 @@ def generate_poem():
 
       
         final_poem = format_poem(poem)
+        print(final_poem)
 
         
     return True
