@@ -74,4 +74,82 @@ def generate_poem():
             df_docs = pd.read_csv(path+"/" + file)
             number_docs = df_docs.shape[0]
             df_sentences = pd.DataFrame(columns=['doc_id','sentence'])  
-          
+            for i in range(number_docs):
+                text = df_docs.text[i]
+                #dictionary to replace unwanted elements
+                replace_dict = {'?«' :  '«', '(' :  '', ')' : '', ':' : ',', '.' : ',', ',,,' : ','}
+                for x,y in replace_dict.items():
+                    text = text.replace(x, y)
+                text = text.lower()   
+                #split into sentences
+                sentences = re.split(split, text)
+                len_sentences = len(sentences)   
+                doc_id = [i] * (len_sentences)
+                #save sentence and poem_id
+                doc_sentences = pd.DataFrame({'doc_id' : doc_id, 'sentence' : sentences})
+                df_sentences = df_sentences.append(doc_sentences)   
+            #extra cleaning and reset index
+            df_sentences = df_sentences[df_sentences.sentence != '']
+            df_sentences.reset_index(drop=True, inplace=True)  
+            #saves clean sentences to a .csv file 
+            df_sentences.to_csv("sentences_" + file)
+            
+        #saves sentences to  sentences_poems.csv file 
+        df = docs_to_sentences(file='poems.csv', split=r"\n")
+        #function to generate a poem
+        def poem_generator(file, word, n_sents=5):
+                #load the english model from Spacy
+                nlp = spacy.load("en_core_web_lg")
+                init_str = nlp(word)
+                path = os.getcwd()
+                sentences = pd.read_csv(path+'/'+ file)
+                sup_index= sentences.shape[0]
+                poem_id = int()
+                poem =[]
+                #generate the sentences
+                for i in range(n_sents):
+                    rand_sent_index = np.random.randint(0, sup_index, size=30)
+                    sent_list = list(sentences.sentence.iloc[rand_sent_index])
+                    #transform sentences to a Spacy Doc object
+                    docs = nlp.pipe(sent_list)
+                    sim_list = []
+                    #compute similarity for each sentence
+                    for sent in docs:
+                        similarity = (init_str.similarity(sent))
+                        sim_list.append(similarity)
+                    #saves similarity to DataFrame
+                    df_1 = pd.DataFrame({'similarity' : sim_list, 'doc_id' : sentences.doc_id.iloc[rand_sent_index] }, index=rand_sent_index)   
+                    df_1 = df_1[df_1.doc_id != poem_id]
+                    df_1.sort_values(by='similarity', inplace=True, ascending=False)
+                    sent_index= df_1.index[0]
+                    sent = sentences.sentence[sent_index]
+                    #erase line jumps and carriage return
+                    replace_dict = {'\n' :  '', '\r' :  ''}
+                    for x,y in replace_dict.items():
+                        sent = sent.replace(x, y)
+                    poem.append(sent)    
+                    poem_id = df_1.doc_id.iloc[0]
+                    init_str = nlp(sent)  
+                #join the sentences with a line break
+                str_poem = ("\n".join(poem)) 
+                return str_poem
+
+        #generate a poem with initial word ='fear'
+        poem = poem_generator(file='sentences_poems.csv',word=WORD)
+        #function to uppercase first letter and add a dot to the end
+        def format_poem(text):
+            text = text[:1].upper() + text[1:]
+            
+            text = text[:-1] + '.'
+            return text   
+
+      
+        final_poem = format_poem(poem)
+
+        
+    return True
+
+
+
+
+    
